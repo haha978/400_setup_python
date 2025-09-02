@@ -305,6 +305,7 @@ class TaborProteus:
         
     def set_digitizer(self, sampleRateADC, numframes, cfr, tacq, acq_delay, ADC_ch):
         inst = self.inst
+        breakpoint()
         readLen = int(tacq*(sampleRateADC)/16) // 96 * 96
         cmd = ':DIG:MODE DUAL'
         inst.send_scpi_cmd(cmd)

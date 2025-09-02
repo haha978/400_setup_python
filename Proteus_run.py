@@ -110,7 +110,7 @@ def generate_pulses(inst):
     sampleRateADC = 2.25e9
     ADC_ch = 1
     num_Pulses = 5
-    cfr = 75.38e6
+    cfr = 100e6
     inst.reset()
     inst.initialize_AWG(ch = 1)
     # Set sample rate for ADC and DAC
@@ -127,13 +127,13 @@ def generate_pulses(inst):
 
 def readout_data(inst, MODE, cfr, numframes, ADC_ch):
     #need to wait before we apply this TRIG
-    # Digitizer mode
-    if MODE == 0:
-        ret = inst.send_scpi_cmd(':DIG:ACQ:TYPE ALL')
-    elif MODE == 1:
-        ret = inst.send_scpi_cmd(':DIG:ACQ:TYPE HEAD')  # ALL / HEADers
+    # # Digitizer mode -- need this in the updated FW.
+    # if MODE == 0:
+    #     ret = inst.send_scpi_cmd(':DIG:ACQ:TYPE ALL')
+    # elif MODE == 1:
+    #     ret = inst.send_scpi_cmd(':DIG:ACQ:TYPE HEAD')  # ALL / HEADers
 
-    ret = inst.send_scpi_query(':DIG:ACQ:TYPE?')
+    # ret = inst.send_scpi_query(':DIG:ACQ:TYPE?')
     
      # SET DIGITIZER
     assert inst.sampleRateDAC / 4 == inst.sampleRateADC, "sampleRateDAC must be set multiple of 4"
