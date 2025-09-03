@@ -117,8 +117,8 @@ def generate_pulses(inst):
     inst.sampleRateDAC, inst.sampleRateADC = sampleRateDAC, sampleRateADC
     p1 = defPulse(amp = 1, mod = 0, length = 100e-6, phase = 90, spacing = 100e-6)
     p2 = defPulse(amp = 1, mod = 0, length = 100e-6, phase = 90, spacing = 100e-6)
-    b1 = defBlock([p1, p2], reps = [num_Pulses, num_Pulses], markers = [1, 1], trigs = [0, 1])
-    b2 = defBlock([p1, p2], reps = [num_Pulses, num_Pulses], markers = [1, 1], trigs = [0, 1])
+    b1 = defBlock([p1, p2], reps = [num_Pulses, num_Pulses], markers = [1, 1], trigs = [1, 1])
+    b2 = defBlock([p1, p2], reps = [num_Pulses, num_Pulses], markers = [1, 1], trigs = [1, 1])
     inst.makeBlocks([b1, b2], 1, [10000, 10000])
     inst.set_interpolation(ch = 1, interp_factor = 8)
     inst.set_NCO(cfr = 75.38e6, phase = 90)
@@ -140,6 +140,7 @@ def readout_data(inst, MODE, cfr, numframes, ADC_ch):
     tacq, acq_delay = 10e-6, 12e-6
     readLen, numframes= inst.set_digitizer(inst.sampleRateADC, numframes, cfr, tacq, acq_delay, ADC_ch)
     inst.send_scpi_query(':DIG:ACQuire:FRAM:STATus?')
+    breakpoint()
     inst.send_scpi_cmd('*TRG')
     max_iter = 1200
     frameRx = 0

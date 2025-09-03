@@ -165,8 +165,13 @@ class TaborProteus:
         resp = inst.send_scpi_query(':SYST:ERR?')
         assert int(resp.split(',')[0]) == 0
         inst.send_scpi_cmd(':MARK:SEL 1')
+        # delete below line once update
+        inst.send_scpi_cmd(':MARK:VOLT:PTOP 1')
         inst.send_scpi_cmd(':MARK:STAT ON')
         inst.send_scpi_cmd(':MARK:SEL 2')
+
+        # delete below line once update
+        inst.send_scpi_cmd(':MARK:VOLT:PTOP 1')
         inst.send_scpi_cmd(':MARK:STAT ON')
         resp = inst.send_scpi_query(':SYST:ERR?')
         assert int(resp.split(',')[0]) == 0
@@ -305,7 +310,6 @@ class TaborProteus:
         
     def set_digitizer(self, sampleRateADC, numframes, cfr, tacq, acq_delay, ADC_ch):
         inst = self.inst
-        breakpoint()
         readLen = int(tacq*(sampleRateADC)/16) // 96 * 96
         cmd = ':DIG:MODE DUAL'
         inst.send_scpi_cmd(cmd)
@@ -335,7 +339,9 @@ class TaborProteus:
         # trigger from external source
         inst.send_scpi_cmd(':DIG:TRIG:SOUR EXT')
         inst.send_scpi_cmd(':DIG:TRIG:SLOP NEG')
-        inst.send_scpi_cmd(':DIG:TRIG:LEV1 0.2')
+        
+        # This trig level needs to change for the updated software and firmware
+        inst.send_scpi_cmd(':DIG:TRIG:LEV1 1.0')
         inst.send_scpi_cmd(f':DIG:TRIG:DEL:EXT {acq_delay}' )
         resp = inst.send_scpi_query(':SYST:ERR?')
         print("Set complex error = ")
