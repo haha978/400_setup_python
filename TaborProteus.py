@@ -131,6 +131,23 @@ class TaborProteus:
         resp = inst.send_scpi_query(':SYST:ERR?')
         assert int(resp.split(',')[0]) == 0, f"IQ segment not downloaded correctly. Error code: {resp}"
 
+    def download_waveform(self, ch, segMem, dacWave):
+        print(f"Downloading segment: {segMem}, channel: {ch}")
+        inst = self.inst
+        res = inst.send_scpi_cmd(f':INST:CHAN {ch}')
+        # inst.send_scpi_cmd(f':TRAC:FORM U16')
+        inst.send_scpi_cmd(f':TRAC:DEF {segMem}, {len(dacWave)}')
+        inst.send_scpi_cmd(f':TRAC:SEL {segMem}')
+        
+        # Download the binary data to segment
+        prefix = '*OPC?; :TRAC:DATA'
+        dacWave = dacWave.astype(np.uint16)
+        inst.timeout = 30000
+        inst.write_binary_data(prefix, dacWave)
+        inst.timeout = 10000
+        resp = inst.send_scpi_query(':SYST:ERR?')
+        assert int(resp.split(',')[0]) == 0, f"IQ segment not downloaded correctly. Error code: {resp}"
+
     def download_marker(self, ch, segMem, mark1, mark2):
         """
         Downloads marker data to the specified channel and segment.
@@ -204,6 +221,12 @@ class TaborProteus:
                 spacingPt = self.sampleRateDAC * pulse['spacing'] // 64 * 64
                 lengthPt = self.sampleRateDAC * pulse['length'] // 64 * 64
                 spacingPt, lengthPt = int(spacingPt), int(lengthPt)
+
+                print(f"This is new pulse length for pulse: {pulse_idx}")
+                pulse_len = lengthPt / self.sampleRateDAC
+                spacing_len = spacingPt / self.sampleRateDAC
+                pulse['length'], pulse['spacing'] = pulse_len, spacing_len
+
                 spacing_I, spacing_Q = makeDC(spacingPt)
                 mark_DC, mark_DC2 = np.zeros(spacingPt), np.zeros(spacingPt)
                 
@@ -280,6 +303,7 @@ class TaborProteus:
         print("AWG Initialization done.")
     
     def set_NCO(self, cfr, phase):
+        print("Setting NCO...")
         inst = self.inst
         inst.send_scpi_cmd(':SOUR:NCO:SIXD1 ON')
         inst.send_scpi_cmd(f':SOUR:NCO:CFR1 {cfr}')
@@ -306,6 +330,7 @@ class TaborProteus:
         # multiply sampleRateDAC by 8 -- the interpolation factor -- and set it to AWG.
         self.sampleRateDAC = self.sampleRateDAC * interp_factor
         inst.send_scpi_cmd(f':FREQ:RAST {self.sampleRateDAC}')
+        print("Done setting interpolation factor.")
         return self.sampleRateDAC
         
     def set_digitizer(self, sampleRateADC, numframes, cfr, tacq, acq_delay, ADC_ch):
@@ -323,6 +348,7 @@ class TaborProteus:
         # Enable capturing data from channel 1
         cmd = f':DIG:CHAN:SEL {ADC_ch}'
         inst.send_scpi_cmd(cmd)
+        self.adcChan = ADC_ch
         resp = inst.send_scpi_query(':SYST:ERR?')
         print("Dig error = ")
         print(resp)
