@@ -139,7 +139,7 @@ def main():
                     samples = samples[:num_frames * readLen]  # Trim to full frames only
                     frames = samples.reshape((num_frames, readLen))
 
-                    # NEED TO generate time-axis TODO
+                    #TODO NEED TO generate time-axis 
                     time_axis = np.concatenate( (), axis = 0)
 
                     # Compute averages for each frame
@@ -169,17 +169,19 @@ def main():
                 elif cmd_byte == 6:  # Program MW Chirp Waveform
                     print("Programming MW Chirp waveform...")
                     # Program the MW Chirp waveform
+                    # Sage_write(['6',])
+                    breakpoint()
                     sampleRateDAC = 9e9
                     awg_center_freq = 3e9
                     awg_bw_freq = 100
                     sweep_freq = 1000
                     srs_freq = 1e6
                     bits = 16
-                    pol_time = 20
+                    pol_time = 40
                     fCenter = awg_center_freq - srs_freq
                     fStart, fStop = fCenter - 0.5*awg_bw_freq, fCenter + 0.5*awg_bw_freq
                     rampTime = 1/sweep_freq
-                    dac_chan = 2
+                    dac_chan = 3
                     trig_num = 2
 
                     print("Initializing...")
@@ -214,31 +216,32 @@ def main():
                     inst.send_scpi_cmd(':NCO:SIXD1 ON')
                     inst.send_scpi_cmd(':SOUR:MODE DUC')
 
-                    # no interpolation
-                    inst.send_scpi_cmd(':SOUR:INT:NONE')
-
                     #set trigger as source
                     voltage_level = 1
                     inst.send_scpi_cmd(f':TRIG:ACTIVE:SEL TRG{trig_num}')
                     inst.send_scpi_cmd(f':TRIG:LEV {voltage_level}')
                     inst.send_scpi_cmd(':TRIG:ACTIVE:STAT ON')
-                    # ret = inst.send_scpi_query(':SOUR:IQM?')
-                    # print(ret)
-                    # ret = inst.send_scpi_query(':SOUR:INT?')
-                    # print(ret)
-                    # ret = inst.send_scpi_query(':SOUR:MODE?')
-                    # print(ret)
+                    num_cycles = int(np.floor(pol_time * sweep_freq))
+                    
+                    inst.set_chirp_tasktable_trig(ch = dac_chan, segMem = 1, num_reps = num_cycles, trig_num = trig_num)
+                    inst.send_scpi_cmd(':SOUR:VOLT MAX')
+                    inst.send_scpi_cmd(':SOUR:FUNC:MODE TASK')
 
                 elif cmd_byte == 7:  # Play MW Chirp Waveform
                     print("Playing MW Chirp waveform...")
                     # Play the MW Chirp waveform
                     # TURN ON OUTPUT
-                    inst.send_scpi_cmd(':SOUR:VOLT MAX')
-                    inst.send_scpi_cmd(':SOUR:FUNC:MODE TASK')
                     inst.send_scpi_cmd(':OUTP ON')
                     resp = inst.send_scpi_query(':SYST:ERR?')
                     assert int(resp.split(',')[0]) == 0
-                    inst.send_scpi_cmd('*TRG')
+                
+                elif cmd_byte == 8:  # Stop MW Chirp Waveform
+                    print("Stopping MW Chirp waveform...")
+                    # Stop the MW Chirp waveform
+                    inst.send_scpi_cmd(':OUTP OFF')
+                    resp = inst.send_scpi_query(':SYST:ERR?')
+                    assert int(resp.split(',')[0]) == 0
+                    print("MW Chirp waveform stopped.")
 
                 else:
                     print(f"Unknown command byte: {cmd_byte}")
