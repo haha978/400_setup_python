@@ -58,27 +58,44 @@ def main():
                     print("Done initializing.")
                     
                 elif cmd_byte == 2:  # Pulse sequence on CPU Trigger
+                    p1_len = cmd_bytes[1]*1e-6
+                    p2_len = cmd_bytes[2]*1e-6
+                    p2_spacing = cmd_bytes[3]*1e-6
+                    #expt_time not used...!
+                    expt_time = cmd_bytes[4]
+                    tacq = cmd_bytes[5]
+                    tref = cmd_bytes[6]
+                    tof = cmd_bytes[7]
                     sampleRateDAC = 1.125e9
                     sampleRateADC = 2.25e9
                     ADC_ch = 2
                     num_Pulses = 5
-                    cfr = 100e6
+                    
                     # Set sample rate for ADC and DAC
                     inst.sampleRateDAC, inst.sampleRateADC = sampleRateDAC, sampleRateADC
                     
                     print("Generating pulse sequence...")
-                    p1 = defPulse(amp = 1, mod = 0, length = 50e-6, phase = 0, spacing = 100e-6)
-                    p2 = defPulse(amp = 1, mod = 0, length = 50e-6, phase = 90, spacing = 100e-6)
-                    b1 = defBlock([p1, p2], reps = [1, 10000], markers = [1, 1], trigs = [1, 1])
+                    p1 = defPulse(amp = 1, mod = 0, length = p1_len, phase = 0, spacing = 5e-6)
+                    p2 = defPulse(amp = 1, mod = 0, length = p2_len, phase = 90, spacing = p2_spacing)
+                    pulse_l = [p1, p2]
+
+                    # round it up to 64 (Need to check if it rounds up correctly)
+                    for pulse in pulse_l:
+                        pulse['length'] = int(np.round(pulse['length'] * sampleRateDAC / 64) * 64 / sampleRateDAC)
+                        pulse['spacing'] = int(np.round(pulse['spacing'] * sampleRateDAC / 64) * 64 / sampleRateDAC)
+
+                    b1 = defBlock([p1, p2], reps = [1, 10000], markers = [1, 1], trigs = [0, 1])
                     # b2 = defBlock([p1, p2], reps = [num_Pulses, num_Pulses], markers = [1, 1], trigs = [1, 1])
                     inst.makeBlocks(block_l = [b1], ch = 1, repeatSeq = [1])
                     print("Pulse sequence generation done.")
                     
+                    cfr = 100.524e6 + tref + tof  # carrier frequency + reference frequency + offset frequency
+
                     inst.set_interpolation(ch = 1, interp_factor = 8)
-                    inst.set_NCO(cfr = 75.38e6, phase = 90)
+                    inst.set_NCO(cfr = cfr, phase = 90)
 
                     # This is hard-coded for now.
-                    numframes = b1['reps'][0] + b1['reps'][1]
+                    numframes = b1['reps'][1]
                     
                     # Handle trigger-based data acquisition
                     # SET DIGITIZER
@@ -140,7 +157,7 @@ def main():
                     frames = samples.reshape((num_frames, readLen))
 
                     #TODO NEED TO generate time-axis 
-                    time_axis = np.concatenate( (), axis = 0)
+                    time_axis = (np.arange(numframes) + 1) * (p2['length'] + p2['spacing'])
 
                     # Compute averages for each frame
                     frame_means = frames.mean(axis=1)  # This will be complex: mean I + 1j*mean Q
@@ -169,15 +186,13 @@ def main():
                 elif cmd_byte == 6:  # Program MW Chirp Waveform
                     print("Programming MW Chirp waveform...")
                     # Program the MW Chirp waveform
-                    # Sage_write(['6',])
-                    breakpoint()
                     sampleRateDAC = 9e9
-                    awg_center_freq = 3e9
-                    awg_bw_freq = 100
-                    sweep_freq = 1000
-                    srs_freq = 1e6
+                    awg_center_freq = cmd_bytes[1]
+                    awg_bw_freq = cmd_bytes[2]
+                    sweep_freq = cmd_bytes[4]
+                    srs_freq = cmd_bytes[5]
                     bits = 16
-                    pol_time = 40
+                    pol_time = cmd_bytes[6] # seconds
                     fCenter = awg_center_freq - srs_freq
                     fStart, fStop = fCenter - 0.5*awg_bw_freq, fCenter + 0.5*awg_bw_freq
                     rampTime = 1/sweep_freq
