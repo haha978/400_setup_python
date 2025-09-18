@@ -353,8 +353,8 @@ class TaborProteus:
         print(resp)
         # DDC activation to complex i+jq
         inst.send_scpi_cmd(':DIG:DDC:MODE COMP')
-        inst.send_scpi_cmd(':DIG:DDC:CFR1 {0}'.format(cfr))
-        inst.send_scpi_cmd(':DIG:DDC:PHAS1 90')
+        inst.send_scpi_cmd(f':DIG:DDC:CFR{ADC_ch} {cfr}')
+        inst.send_scpi_cmd(f':DIG:DDC:PHAS{ADC_ch} 0')
         inst.send_scpi_cmd(':DIG:DDC:CLKS AWG')
         resp = inst.send_scpi_query(':SYST:ERR?')
         print("Set complex error = ")

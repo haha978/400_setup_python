@@ -157,17 +157,25 @@ def main():
                     frame_means = frames.mean(axis=1)  # This will be complex: mean I + 1j*mean Q
                     frame_means_I = frames.real.mean(axis=1)
                     frame_means_Q = frames.imag.mean(axis=1)
+                    amps = np.sqrt(frame_means_I**2 + frame_means_Q**2)
                     # After the code that creates 'frames'
                     first_frame = frames[0]
 
-                    plt.figure(figsize=(6, 6))
-                    plt.scatter(first_frame.real, first_frame.imag, s= 1, alpha= 1)
+                    plt.figure(num = 1, figsize=(6, 6))
+                    plt.scatter(first_frame.real, first_frame.imag, s= 1, alpha= 1, rasterized = True)
                     plt.xlabel('I (Real)')
                     plt.ylabel('Q (Imaginary)')
                     plt.title(f'IQ Plot of First Frame ({readLen} samples)')
                     plt.grid(True)
                     plt.axis('equal')  # Ensures aspect ratio is 1:1
+
+                    plt.figure(num = 2, figsize = (10,6))
+                    plt.scatter(time_axis, amps, c='r', s= 1, alpha= 1, rasterized = True)
+                    plt.xlabel('Time [s]')
+                    plt.ylabel('Ampltitude [a.u.]')
+                    plt.title(f'time vs Amplitude plot of {num_frames} frames')
                     plt.show()
+                    breakpoint()
 
                 elif cmd_byte == 4:  # Cleanup
                     print("Cleaning up and preparing for the next cycle...")
