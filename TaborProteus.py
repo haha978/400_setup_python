@@ -221,12 +221,11 @@ class TaborProteus:
                 spacingPt = self.sampleRateDAC * pulse['spacing'] // 64 * 64
                 lengthPt = self.sampleRateDAC * pulse['length'] // 64 * 64
                 spacingPt, lengthPt = int(spacingPt), int(lengthPt)
-
-                print(f"This is new pulse length for pulse: {pulse_idx}")
                 pulse_len = lengthPt / self.sampleRateDAC
                 spacing_len = spacingPt / self.sampleRateDAC
                 pulse['length'], pulse['spacing'] = pulse_len, spacing_len
-
+                print(f"This is new pulse length {pulse['length']} for pulse: {pulse_idx}")
+                print(f"This is new spacing length {pulse['spacing']} for pulse: {pulse_idx}")
                 spacing_I, spacing_Q = makeDC(spacingPt)
                 mark_DC, mark_DC2 = np.zeros(spacingPt), np.zeros(spacingPt)
                 
@@ -345,7 +344,7 @@ class TaborProteus:
         print("Dig Frequency = ")
         print(resp)
 
-        # Enable capturing data from channel 1
+        # Enable capturing data from channel ADC_ch
         cmd = f':DIG:CHAN:SEL {ADC_ch}'
         inst.send_scpi_cmd(cmd)
         self.adcChan = ADC_ch

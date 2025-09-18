@@ -14,6 +14,7 @@ from teproteus import TEProteusAdmin as TepAdmin
 from teproteus import TEProteusInst as TepInst
 from TaborProteus import TaborProteus
 from proteus_utils import defPulse, defBlock, makeChirp
+import traceback
 
 def main():
     # Set up the UDP connection
@@ -63,13 +64,12 @@ def main():
                     p2_spacing = cmd_bytes[3]*1e-6
                     #expt_time not used...!
                     expt_time = cmd_bytes[4]
-                    tacq = cmd_bytes[5]
+                    tacq = cmd_bytes[5]*1e-6
                     tref = cmd_bytes[6]
                     tof = cmd_bytes[7]
                     sampleRateDAC = 1.125e9
                     sampleRateADC = 2.25e9
                     ADC_ch = 2
-                    num_Pulses = 5
                     
                     # Set sample rate for ADC and DAC
                     inst.sampleRateDAC, inst.sampleRateADC = sampleRateDAC, sampleRateADC
@@ -78,13 +78,9 @@ def main():
                     p1 = defPulse(amp = 1, mod = 0, length = p1_len, phase = 0, spacing = 5e-6)
                     p2 = defPulse(amp = 1, mod = 0, length = p2_len, phase = 90, spacing = p2_spacing)
                     pulse_l = [p1, p2]
-
                     # round it up to 64 (Need to check if it rounds up correctly)
-                    for pulse in pulse_l:
-                        pulse['length'] = int(np.round(pulse['length'] * sampleRateDAC / 64) * 64 / sampleRateDAC)
-                        pulse['spacing'] = int(np.round(pulse['spacing'] * sampleRateDAC / 64) * 64 / sampleRateDAC)
 
-                    b1 = defBlock([p1, p2], reps = [1, 10000], markers = [1, 1], trigs = [0, 1])
+                    b1 = defBlock([p1, p2], reps = [1, 100000], markers = [1, 1], trigs = [0, 1])
                     # b2 = defBlock([p1, p2], reps = [num_Pulses, num_Pulses], markers = [1, 1], trigs = [1, 1])
                     inst.makeBlocks(block_l = [b1], ch = 1, repeatSeq = [1])
                     print("Pulse sequence generation done.")
@@ -102,7 +98,7 @@ def main():
                     assert inst.sampleRateDAC / 4 == inst.sampleRateADC, "sampleRateDAC must be set multiple of 4"
                     
                     print("Setting Digitizer...")
-                    tacq, acq_delay = 10e-6, 12e-6
+                    acq_delay = 12e-6
                     readLen, numframes= inst.set_digitizer(inst.sampleRateADC, numframes, cfr, tacq, acq_delay, ADC_ch)
                     inst.send_scpi_query(':DIG:ACQuire:FRAM:STATus?')
                     print("Done setting digitizer.")
@@ -135,11 +131,9 @@ def main():
 
                     # Get the total data size (in bytes)
                     resp = inst.send_scpi_query(':DIG:DATA:SIZE?')
-                    num_bytes = np.uint32(resp)
+                    num_bytes = np.uint64(resp)
                     print('Total size in bytes: ' + resp)
 
-                    # Read the data that was captured by DDR 1:
-                    inst.send_scpi_cmd(':DIG:CHAN:SEL 2')
 
                     # because read format is UINT16 we divide byte number by 2
                     wavlen = num_bytes // 2
@@ -193,6 +187,7 @@ def main():
                     srs_freq = cmd_bytes[5]
                     bits = 16
                     pol_time = cmd_bytes[6] # seconds
+                    
                     fCenter = awg_center_freq - srs_freq
                     fStart, fStop = fCenter - 0.5*awg_bw_freq, fCenter + 0.5*awg_bw_freq
                     rampTime = 1/sweep_freq
@@ -216,7 +211,7 @@ def main():
                     # DOWNLOAD TWO SEGMENTS
                     for k, dacWave in seg_dict.items():
                         segMem = k
-                        inst.download_waveform(inst, dac_chan, segMem, dacWave)
+                        inst.download_waveform(dac_chan, segMem, dacWave)
                     
                     #CONTINUOUS MODE ON
                     inst.send_scpi_cmd(":INIT:CONT OFF")
@@ -262,7 +257,10 @@ def main():
                     print(f"Unknown command byte: {cmd_byte}")
 
         except Exception as e:
-            print(f"Error receiving or processing data: {e}")
+            print("Exception type:", type(e).__name__)
+            print("Exception message:", e)
+            print("Traceback:")
+            print(traceback.format_exc())
             connect = off
         # Sleep to avoid excessive CPU usage (optional)
         time.sleep(0.1)
