@@ -103,7 +103,6 @@ def generate_chirp_external_trigger(inst):
     resp = inst.send_scpi_query(':SYST:ERR?')
     print(resp)
     assert int(resp.split(',')[0]) == 0
-    breakpoint()
 
 def generate_pulses(inst):
     sampleRateDAC = 1.125e9
