@@ -126,18 +126,43 @@ def generate_pulses(inst):
 
 def readout_data(inst, MODE, cfr, numframes, ADC_ch):
     #need to wait before we apply this TRIG
-    # # Digitizer mode -- need this in the updated FW.
-    # if MODE == 0:
-    #     ret = inst.send_scpi_cmd(':DIG:ACQ:TYPE ALL')
-    # elif MODE == 1:
-    #     ret = inst.send_scpi_cmd(':DIG:ACQ:TYPE HEAD')  # ALL / HEADers
+    # Digitizer mode -- need this in the updated FW.
+    print("This is readout MODE: ", MODE)
+    if MODE == 0:
+        ret = inst.send_scpi_cmd(':DIG:ACQ:TYPE ALL')
+    elif MODE == 1:
+        ret = inst.send_scpi_cmd(':DIG:ACQ:TYPE HEAD')  # ALL / HEADers
 
-    # ret = inst.send_scpi_query(':DIG:ACQ:TYPE?')
+    ret = inst.send_scpi_query(':DIG:ACQ:TYPE?')
     
      # SET DIGITIZER
     assert inst.sampleRateDAC / 4 == inst.sampleRateADC, "sampleRateDAC must be set multiple of 4"
-    tacq, acq_delay = 50e-6, 12e-6
+    tacq, acq_delay = 29e-6, 12e-6
     readLen, numframes= inst.set_digitizer(inst.sampleRateADC, numframes, cfr, tacq, acq_delay, ADC_ch)
+
+    # Enable capturing data from DDR 1
+    inst.send_scpi_cmd(':DIG:CHAN:SEL 1')
+    inst.send_scpi_cmd(':DIG:CHAN:STATE ENAB')
+    inst.send_scpi_cmd(':DIG:CHAN:RANGe {0}'.format("HIGH"))
+
+    # # Enable capturing data from DDR 2
+    inst.send_scpi_cmd(':DIG:CHAN:SEL 2')
+    inst.send_scpi_cmd(':DIG:CHAN:STATE ENAB')
+    inst.send_scpi_cmd(':DIG:CHAN:RANGe {0}'.format("HIGH"))
+
+    inst.send_scpi_cmd(':DIG:DDC:BIND ON')
+
+    # Select to store the DSP1 data
+    inst.send_scpi_cmd(':DSP:STOR DSP')  # DIRect | DSP | FFT
+    resp = inst.send_scpi_query(':SYST:ERR?')
+    print(resp)
+
+    # dsp decision frame
+    inst.send_scpi_cmd(':DSP:DEC:FRAM {0}'.format(readLen / 4))
+    resp = inst.send_scpi_query(':SYST:ERR?')
+    print(resp)
+
+
     inst.send_scpi_query(':DIG:ACQuire:FRAM:STATus?')
     breakpoint()
     inst.send_scpi_cmd('*TRG')

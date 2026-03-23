@@ -140,7 +140,7 @@ def main():
                     wav1 = np.zeros(wavlen, dtype=np.uint16)
                     rc = inst.read_binary_data(':DIG:DATA:READ?', wav1, num_bytes)
                     resp = inst.send_scpi_query(':SYST:ERR?')
-                    print("read data from DDR2")
+                    print("read data from DDR1")
                     wav1 = np.int32(wav1)
                     wave = wav1[0::2] - 16384
                     samplesI = wave[0::2]
