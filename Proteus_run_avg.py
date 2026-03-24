@@ -146,9 +146,9 @@ def readout_data(inst, MODE, cfr, numframes, ADC_ch):
     inst.send_scpi_cmd(':DIG:CHAN:RANGe {0}'.format("HIGH"))
 
     # # Enable capturing data from DDR 2
-    inst.send_scpi_cmd(':DIG:CHAN:SEL 2')
-    inst.send_scpi_cmd(':DIG:CHAN:STATE ENAB')
-    inst.send_scpi_cmd(':DIG:CHAN:RANGe {0}'.format("HIGH"))
+    # inst.send_scpi_cmd(':DIG:CHAN:SEL 2')
+    # inst.send_scpi_cmd(':DIG:CHAN:STATE ENAB')
+    # inst.send_scpi_cmd(':DIG:CHAN:RANGe {0}'.format("HIGH"))
 
     inst.send_scpi_cmd(':DIG:DDC:BIND ON')
 
@@ -181,6 +181,13 @@ def readout_data(inst, MODE, cfr, numframes, ADC_ch):
             break
     print(resp)
     inst.send_scpi_cmd(':DIG:INIT OFF')
+
+    header_size=88
+    num_bytes = numframes * header_size
+    print('Total Headers size in bytes: {0} '.format(num_bytes))
+    header = np.zeros(int(num_bytes), dtype=np.uint8)
+    proteus_header = get_cpatured_header(printHeader=True,N=10000,buf=header,dspEn=True)
+    breakpoint()
         
     if MODE == 0:
         # Choose which frames to read (all in this example)
