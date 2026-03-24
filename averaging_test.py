@@ -164,7 +164,7 @@ def main():
 
     # MODE 0: reading out frames, MODE 1: reading out Header
     # Set to readout header or the full frame
-    MODE = 0
+    MODE = 1
 
     if MODE == 0:
         ret = inst.send_scpi_cmd(':DIG:ACQ:TYPE ALL')
@@ -247,10 +247,11 @@ def main():
     # resp = inst.send_scpi_query(':DIG:ACQuire:FRAM:STATus?')
     print(resp)
     inst.send_scpi_cmd('*TRG')
-    max_iter = 120
+    max_iter = 12
     frameRx = 0
     times = 0
     FRAME_NMB = numframes
+    print("This is number of frames to capture: ", FRAME_NMB)
     while (frameRx < FRAME_NMB):
         # inst.send_scpi_cmd(':DIG:TRIG:IMM')
         resp = inst.send_scpi_query(':DIG:ACQuire:FRAM:STATus?')
@@ -287,7 +288,7 @@ def main():
         print(resp)
         print("read data from DDR1")
 
-    if MODE == 0:
+    if MODE == 0 or MODE == 1:
         read = time.time()
         # Choose what to read
         ret = inst.send_scpi_cmd(':DIG:DATA:TYPE HEAD')
@@ -303,7 +304,7 @@ def main():
         print("Length of the header buffer")
         print(len(header))
         print("First 800 points of the header")
-        # print(header[:800])
+        print(header[:800])
         resp = inst.send_scpi_query(':SYSTem:INFormation:FPGA:VERsion?')
         print(resp)
     
