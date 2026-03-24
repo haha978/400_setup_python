@@ -136,9 +136,78 @@ def readout_data(inst, MODE, cfr, numframes, ADC_ch):
     ret = inst.send_scpi_query(':DIG:ACQ:TYPE?')
     
      # SET DIGITIZER
-    assert inst.sampleRateDAC / 4 == inst.sampleRateADC, "sampleRateDAC must be set multiple of 4"
-    tacq, acq_delay = 29e-6, 12e-6
-    readLen, numframes= inst.set_digitizer(inst.sampleRateADC, numframes, cfr, tacq, acq_delay, ADC_ch)
+
+    sampleRateADC = inst.sampleRateDAC / 4
+    print("This is sampleRateADC: ", sampleRateADC)
+    # tacq = 50
+    # readLen = int(50*1e-6*(2.7*1e9)/4) // 96 * 96
+    readLen = 2016 * 2 # = 2016, largest transmission length with granularity of 36 and below 2048/4 for DSP capturing length
+    cmd = ':DIG:MODE DUAL'
+    inst.send_scpi_cmd(cmd)
+    print('ADC Clk Freq {0}'.format(sampleRateADC))
+    cmd = ':DIG:FREQ  {0}'.format(sampleRateADC)
+    inst.send_scpi_cmd(cmd)
+    resp = inst.send_scpi_query(':DIG:FREQ?')
+    print("Dig Frequency = ")
+    print(resp)
+
+    # Enable capturing data from channel 1
+    cmd = ':DIG:CHAN:SEL 1'
+    inst.send_scpi_cmd(cmd)
+    resp = inst.send_scpi_query(':SYST:ERR?')
+    print("Dig error = ")
+    print(resp)
+    # DDC activation to complex i+jq
+    inst.send_scpi_cmd(':DIG:DDC:MODE COMP')
+    inst.send_scpi_cmd(':DIG:DDC:CFR1 {0}'.format(cfr))
+    inst.send_scpi_cmd(':DIG:DDC:PHAS1 90')
+    inst.send_scpi_cmd(':DIG:DDC:CLKS AWG')
+    resp = inst.send_scpi_query(':SYST:ERR?')
+    print("Set complex error = ")
+    print(resp)
+    inst.send_scpi_cmd(':DIG:CHAN:STATE ENAB')
+
+    # trigger from external source
+    inst.send_scpi_cmd(':DIG:TRIG:SOUR EXT')
+    inst.send_scpi_cmd(':DIG:TRIG:SLOP NEG')
+    inst.send_scpi_cmd(':DIG:TRIG:LEV1 1')
+    inst.send_scpi_cmd(f':DIG:TRIG:DEL:EXT {12e-6}' )
+    resp = inst.send_scpi_query(':SYST:ERR?')
+    print("Set complex error = ")
+    print(resp)
+
+    print(f"numframes = {numframes}, readLen = {readLen}")
+    inst.send_scpi_cmd(':DIG:ACQ:DEF {0},{1}'.format(numframes, 2*readLen))
+    # inst.send_scpi_cmd(':DIG:ACQ:DEF {0},{1}'.format(numframes, readLen))
+    # inst.send_scpi_cmd(f':DIG:ACQ:FRAM:CAPT 1, {numframes}')
+    inst.send_scpi_cmd(':DIG:ACQ:FRAM:CAPT:ALL')
+    inst.send_scpi_cmd(':DIG:ACQ:ZERO:ALL')
+
+    # Enable capturing data from DDR 1
+    inst.send_scpi_cmd(':DIG:CHAN:SEL 1')
+    inst.send_scpi_cmd(':DIG:CHAN:STATE ENAB')
+    inst.send_scpi_cmd(':DIG:CHAN:RANGe {0}'.format("HIGH"))
+
+    # Enable capturing data from DDR 2
+    inst.send_scpi_cmd(':DIG:CHAN:SEL 2')
+    inst.send_scpi_cmd(':DIG:CHAN:STATE ENAB')
+    inst.send_scpi_cmd(':DIG:CHAN:RANGe {0}'.format("HIGH"))
+
+    inst.send_scpi_cmd(':DIG:DDC:BIND ON')
+
+    # Select to store the DSP1 data
+    inst.send_scpi_cmd(':DSP:STOR DSP')  # DIRect | DSP | FFT
+    resp = inst.send_scpi_query(':SYST:ERR?')
+    print(resp)
+
+    # dsp decision frame
+    inst.send_scpi_cmd(':DSP:DEC:FRAM {0}'.format(readLen / 4)) # 2016 / 4 < 512
+    resp = inst.send_scpi_query(':SYST:ERR?')
+    print(resp)
+
+    # assert inst.sampleRateDAC / 4 == inst.sampleRateADC, "sampleRateDAC must be set multiple of 4"
+    # tacq, acq_delay = 29e-6, 12e-6
+    # readLen, numframes= inst.set_digitizer(inst.sampleRateADC, numframes, cfr, tacq, acq_delay, ADC_ch)
 
     # Enable capturing data from DDR 1
     inst.send_scpi_cmd(':DIG:CHAN:SEL 1')
